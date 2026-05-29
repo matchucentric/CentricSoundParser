@@ -3,6 +3,8 @@ package io.github.matchucentric.centricSoundParser;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Set;
+
 public final class CentricSoundParser extends JavaPlugin {
     @Override
     public void onEnable() {
@@ -12,6 +14,9 @@ public final class CentricSoundParser extends JavaPlugin {
             getDataFolder(),
             Bukkit.getServer().getWorldContainer()
         );
+
+        Set<String> nexoSoundFiles = soundFileIo.analyzeNexoSoundsOnStartup();
+        getLogger().info("Nexo analyzer startup run complete. Entries found: " + nexoSoundFiles.size());
 
         var cspCommand = getCommand("csp");
         if (cspCommand != null) {

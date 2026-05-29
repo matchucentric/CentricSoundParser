@@ -21,10 +21,12 @@ public class NexoSoundFetcher {
 
     private final File dataFolder;
     private final File worldContainer;
+    private final LengthParser lengthParser;
 
     public NexoSoundFetcher(File dataFolder, File worldContainer) {
         this.dataFolder = dataFolder;
         this.worldContainer = worldContainer;
+        this.lengthParser = new LengthParser();
     }
 
     public void fetchNexoSounds(Set<String> soundFiles) {
@@ -239,6 +241,7 @@ public class NexoSoundFetcher {
             paths.filter(Files::isRegularFile)
                 .filter(path -> path.toString().endsWith(".ogg"))
                 .forEach(path -> {
+                    lengthParser.analyzeLength(path.toFile());
                     String pluginsRelativePath = pluginsDir.toPath().relativize(path).toString().replace(File.separatorChar, '/');
                     String assetRelativePath = directory.toPath().relativize(path).toString().replace(File.separatorChar, '/');
                     String displayName = resolveInGameName(soundNameLookup, assetRelativePath, pluginsRelativePath);

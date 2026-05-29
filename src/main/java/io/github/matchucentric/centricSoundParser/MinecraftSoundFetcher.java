@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.Map;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
@@ -21,10 +22,12 @@ public class MinecraftSoundFetcher {
     private static final Logger logger = Logger.getLogger(MinecraftSoundFetcher.class.getName());
     private final File dataFolder;
     private final File worldContainer;
+    private final LengthParser lengthParser;
 
     public MinecraftSoundFetcher(File dataFolder, File worldContainer) {
         this.dataFolder = dataFolder;
         this.worldContainer = worldContainer;
+        this.lengthParser = new LengthParser();
     }
 
     public void fetchMinecraftSounds(Set<String> soundFiles) {
@@ -69,8 +72,8 @@ public class MinecraftSoundFetcher {
 
     private void iterateSoundIndexes(Path indexesDir, File objectsDir, Set<String> soundFiles) {
         List<Path> jsonFiles = new ArrayList<>();
-        try {
-            Files.walk(indexesDir)
+        try (Stream<Path> paths = Files.walk(indexesDir)) {
+            paths
                 .filter(Files::isRegularFile)
                 .filter(path -> path.toString().toLowerCase().endsWith(".json"))
                 .forEach(jsonFiles::add);
@@ -123,6 +126,8 @@ public class MinecraftSoundFetcher {
                         logger.warning("Missing hashed object file for " + unobfuscatedFilename + " at " + hashFile.getPath());
                         continue;
                     }
+
+                    lengthParser.analyzeLength(hashFile);
 
                     String output = dataFolder.toPath().relativize(hashFile.toPath()).toString().replace(File.separatorChar, '/')
                         + " -> " + unobfuscatedFilename;
