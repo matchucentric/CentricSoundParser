@@ -1,5 +1,8 @@
 package io.github.matchucentric.centricSoundParser;
 
+import io.github.matchucentric.centricSoundParser.model.SoundCatalogue;
+import io.github.matchucentric.centricSoundParser.model.SoundData;
+
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
@@ -9,7 +12,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 import java.util.Map;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -21,56 +23,29 @@ import com.google.gson.JsonObject;
 public class MinecraftSoundFetcher {
     private static final Logger logger = Logger.getLogger(MinecraftSoundFetcher.class.getName());
     private final File dataFolder;
-    private final File worldContainer;
     private final LengthParser lengthParser;
 
-    public MinecraftSoundFetcher(File dataFolder, File worldContainer) {
+    public MinecraftSoundFetcher(File dataFolder) {
         this.dataFolder = dataFolder;
-        this.worldContainer = worldContainer;
         this.lengthParser = new LengthParser();
     }
 
-    public void fetchMinecraftSounds(Set<String> soundFiles) {
-        logger.info("MinecraftSoundFetcher.fetchMinecraftSounds was called.");
-        logger.info("Data folder: " + dataFolder.getAbsolutePath());
-
-        if (!dataFolder.exists()) {
-            if (!dataFolder.mkdirs()) {
-                logger.warning("Failed to create plugin data folder");
-                return;
-            }
-        }
-
+    public SoundCatalogue fetchMinecraftSounds() {
+        SoundCatalogue catalogue = new SoundCatalogue();
         File minecraftSoundAssetsDir = new File(dataFolder, "minecraftSoundAssets");
-        if (!minecraftSoundAssetsDir.exists()) {
-            if (minecraftSoundAssetsDir.mkdirs()) {
-                logger.info("Created minecraftSoundAssets folder");
-            } else {
-                logger.warning("Failed to create minecraftSoundAssets folder");
-            }
-        }
-
         File indexesDir = new File(minecraftSoundAssetsDir, "indexes");
         File objectsDir = new File(minecraftSoundAssetsDir, "objects");
 
-        boolean indexesExists = indexesDir.exists() && indexesDir.isDirectory();
-        boolean objectsExists = objectsDir.exists() && objectsDir.isDirectory();
-
-        logger.info("minecraftSoundAssets folder: " + minecraftSoundAssetsDir.getAbsolutePath());
-        logger.info("  - indexes subfolder exists: " + indexesExists);
-        logger.info("  - objects subfolder exists: " + objectsExists);
-
-        soundFiles.add("minecraft fetcher called @ " + worldContainer.getAbsolutePath());
-
-        if (!indexesExists || !objectsExists) {
+        if (!indexesDir.isDirectory() || !objectsDir.isDirectory()) {
             logger.warning("Cannot iterate sounds because one or both required subfolders are missing.");
-            return;
+            return catalogue;
         }
 
-        iterateSoundIndexes(indexesDir.toPath(), objectsDir, soundFiles);
+        iterateSoundIndexes(indexesDir.toPath(), objectsDir, catalogue);
+        return catalogue;
     }
 
-    private void iterateSoundIndexes(Path indexesDir, File objectsDir, Set<String> soundFiles) {
+    private void iterateSoundIndexes(Path indexesDir, File objectsDir, SoundCatalogue catalogue) {
         List<Path> jsonFiles = new ArrayList<>();
         try (Stream<Path> paths = Files.walk(indexesDir)) {
             paths
@@ -83,15 +58,12 @@ public class MinecraftSoundFetcher {
         }
 
         jsonFiles.sort(Comparator.comparing(Path::toString));
-        logger.info("Found " + jsonFiles.size() + " index json files to inspect.");
 
         Gson gson = new Gson();
         for (Path jsonFile : jsonFiles) {
-            logger.info("Scanning index json: " + jsonFile);
             try (FileReader reader = new FileReader(jsonFile.toFile(), StandardCharsets.UTF_8)) {
                 JsonObject root = gson.fromJson(reader, JsonObject.class);
                 if (root == null || !root.has("objects") || !root.get("objects").isJsonObject()) {
-                    logger.warning("Skipping " + jsonFile + " because it has no top-level objects map.");
                     continue;
                 }
 
@@ -127,12 +99,10 @@ public class MinecraftSoundFetcher {
                         continue;
                     }
 
-                    lengthParser.analyzeLength(hashFile);
-
-                    String output = dataFolder.toPath().relativize(hashFile.toPath()).toString().replace(File.separatorChar, '/')
-                        + " -> " + unobfuscatedFilename;
-                    logger.info(output);
-                    soundFiles.add(output);
+                    Double lengthSeconds = lengthParser.analyzeLength(hashFile);
+                    String soundName = "minecraft:" + new File(unobfuscatedFilename).getName();
+                    SoundData soundData = new SoundData(soundName, hashFile.getName(), lengthSeconds, "minecraft");
+                    catalogue.addSoundData(soundData);
                 }
             } catch (Exception e) {
                 logger.warning("Failed to parse index json " + jsonFile + ": " + e.getMessage());

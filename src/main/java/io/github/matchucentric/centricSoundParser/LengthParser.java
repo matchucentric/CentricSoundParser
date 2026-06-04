@@ -3,13 +3,9 @@ package io.github.matchucentric.centricSoundParser;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.logging.Logger;
 
 public class LengthParser {
-    private static final Logger logger = Logger.getLogger(LengthParser.class.getName());
-
-    public void analyzeLength(File oggFile) {
-        logger.info("analyzing length of ogg file: " + oggFile.getName());
+    public Double analyzeLength(File oggFile) {
         try {
             byte[] data = Files.readAllBytes(oggFile.toPath());
 
@@ -17,14 +13,13 @@ public class LengthParser {
             long totalSamples = findTotalSamplesFromOggPages(data);
 
             if (sampleRate <= 0 || totalSamples < 0) {
-                logger.warning("could not determine ogg length for file: " + oggFile.getName());
-                return;
+                return null;
             }
 
             double lengthSeconds = (double) totalSamples / sampleRate;
-            logger.info("length: " + lengthSeconds + " seconds");
+            return Math.round(lengthSeconds * 1000.0) / 1000.0;
         } catch (IOException e) {
-            logger.warning("failed to read ogg file: " + oggFile.getAbsolutePath() + " - " + e.getMessage());
+            return null;
         }
     }
 
@@ -103,6 +98,8 @@ public class LengthParser {
             | ((long) (data[offset + 7] & 0xFF) << 56);
     }
 }
+
+
 
 
 

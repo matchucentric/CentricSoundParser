@@ -9,5 +9,5 @@ softdepend: [Nexo]
 commands:
   csp:
     description: CentricSoundParser commands
-    usage: /<command> parse minecraft
+    usage: /<command> parse minecraft | /<command> data <name>
 

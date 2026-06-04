@@ -1,11 +1,16 @@
 package io.github.matchucentric.centricSoundParser;
 
+import io.github.matchucentric.centricSoundParser.model.SoundCatalogue;
+import io.github.matchucentric.centricSoundParser.model.SoundData;
+
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.Set;
+import java.util.List;
 
 public final class CentricSoundParser extends JavaPlugin {
+    private SoundCatalogue loadedCatalogue = new SoundCatalogue();
+
     @Override
     public void onEnable() {
         getLogger().info("=== CentricSoundParser Enabled ===");
@@ -15,15 +20,39 @@ public final class CentricSoundParser extends JavaPlugin {
             Bukkit.getServer().getWorldContainer()
         );
 
-        Set<String> nexoSoundFiles = soundFileIo.analyzeNexoSoundsOnStartup();
-        getLogger().info("Nexo analyzer startup run complete. Entries found: " + nexoSoundFiles.size());
+        SoundCatalogue minecraftCatalogue = soundFileIo.loadMinecraftCatalogueOnStartup();
+        SoundCatalogue nexoCatalogue = soundFileIo.analyzeNexoSoundsOnStartup();
+        SoundCatalogue mergedCatalogue = SoundCatalogue.merge(List.of(minecraftCatalogue, nexoCatalogue));
+        loadedCatalogue = mergedCatalogue;
+        getLogger().info("Catalogues ready. Minecraft=" + minecraftCatalogue.getSoundDataByName().size()
+            + ", Nexo=" + nexoCatalogue.getSoundDataByName().size()
+            + ", Merged=" + mergedCatalogue.getSoundDataByName().size());
 
         var cspCommand = getCommand("csp");
         if (cspCommand != null) {
-            cspCommand.setExecutor(new CspCommandExecutor(soundFileIo));
+            CspCommandExecutor cspCommandExecutor = new CspCommandExecutor(this, soundFileIo);
+            cspCommand.setExecutor(cspCommandExecutor);
+            cspCommand.setTabCompleter(cspCommandExecutor);
         } else {
             getLogger().warning("Command 'csp' is not defined in plugin.yml");
         }
+    }
+
+    public SoundCatalogue getLoadedCatalogue() {
+        return loadedCatalogue;
+    }
+
+    public void setLoadedCatalogue(SoundCatalogue loadedCatalogue) {
+        this.loadedCatalogue = loadedCatalogue == null ? new SoundCatalogue() : loadedCatalogue;
+    }
+
+    public Double getSoundLength(String soundName) {
+        if (soundName == null) {
+            return null;
+        }
+
+        SoundData soundData = loadedCatalogue.getSoundDataByName().get(soundName);
+        return soundData == null ? null : soundData.getLength();
     }
 
     @Override
