@@ -9,10 +9,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.List;
 
 public final class CentricSoundParser extends JavaPlugin {
+    private static CentricSoundParser instance;
     private SoundCatalogue loadedCatalogue = new SoundCatalogue();
 
     @Override
     public void onEnable() {
+        instance = this;
         getLogger().info("=== CentricSoundParser Enabled ===");
 
         SoundFileIo soundFileIo = new SoundFileIo(
@@ -38,6 +40,10 @@ public final class CentricSoundParser extends JavaPlugin {
         }
     }
 
+    public static CentricSoundParser getInstance() {
+        return instance;
+    }
+
     public SoundCatalogue getLoadedCatalogue() {
         return loadedCatalogue;
     }
@@ -51,12 +57,30 @@ public final class CentricSoundParser extends JavaPlugin {
             return null;
         }
 
+        StringBuilder nexoCatalogue = new StringBuilder("[");
+        boolean first = true;
+        for (SoundData entry : loadedCatalogue.getSoundDataByName().values()) {
+            if (entry == null || entry.getSource() == null
+                || !"nexo".equalsIgnoreCase(entry.getSource().trim())) {
+                continue;
+            }
+            if (!first) {
+                nexoCatalogue.append(", ");
+            }
+            nexoCatalogue.append(entry);
+            first = false;
+        }
+        nexoCatalogue.append("]");
+//        getLogger().info("getSoundLength requested sound='" + soundName
+//            + "', nexo catalogue=" + nexoCatalogue);
+
         SoundData soundData = loadedCatalogue.getSoundDataByName().get(soundName);
         return soundData == null ? null : soundData.getLength();
     }
 
     @Override
     public void onDisable() {
+        instance = null;
         // Plugin shutdown logic
     }
 }
