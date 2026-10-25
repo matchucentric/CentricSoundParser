@@ -11,24 +11,28 @@ import java.util.List;
 public final class CentricSoundParser extends JavaPlugin {
     private static CentricSoundParser instance;
     private SoundCatalogue loadedCatalogue = new SoundCatalogue();
+    private SoundFileIo soundFileIo;
 
     @Override
     public void onEnable() {
         instance = this;
         getLogger().info("=== CentricSoundParser Enabled ===");
 
-        SoundFileIo soundFileIo = new SoundFileIo(
+        soundFileIo = new SoundFileIo(
             getDataFolder(),
             Bukkit.getServer().getWorldContainer()
         );
 
         SoundCatalogue minecraftCatalogue = soundFileIo.loadMinecraftCatalogueOnStartup();
+        // Handle the case where Nexo loaded before us (e.g. alphabetically earlier)
         SoundCatalogue nexoCatalogue = soundFileIo.analyzeNexoSoundsOnStartup();
         SoundCatalogue mergedCatalogue = SoundCatalogue.merge(List.of(minecraftCatalogue, nexoCatalogue));
         loadedCatalogue = mergedCatalogue;
         getLogger().info("Catalogues ready. Minecraft=" + minecraftCatalogue.getSoundDataByName().size()
             + ", Nexo=" + nexoCatalogue.getSoundDataByName().size()
             + ", Merged=" + mergedCatalogue.getSoundDataByName().size());
+
+        getServer().getPluginManager().registerEvents(new NexoIntegrationListener(this, soundFileIo), this);
 
         var cspCommand = getCommand("csp");
         if (cspCommand != null) {

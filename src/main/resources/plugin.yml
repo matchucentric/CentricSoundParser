@@ -4,7 +4,6 @@ version: '${version}'
 main: io.github.matchucentric.centricSoundParser.CentricSoundParser
 api-version: '1.21.11'
 load: POSTWORLD
-softdepend: [Nexo]
 loadbefore: [NPC-core]
 
 commands:
